@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eFootball Tournament League - Home</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="bg-gradient"></div>
+        <div class="particles"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+    <!-- Logo only -->
+    <div class="nav-brand">
+        <a href="index.html" class="logo">
+            <span class="logo-icon">⚽</span>
+            <span class="logo-text">eFootball<span class="highlight">Pro</span></span>
+        </a>
+    </div>
+    
+    <!-- Desktop menu -->
+    <ul class="nav-links">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="tournaments.html">Tournaments</a></li>
+        <li><a href="leaderboard.html">Leaderboard</a></li>
+        <li class="auth-links">
+            <a href="login.html" class="btn btn-outline">Login</a>
+            <a href="register.html" class="btn btn-primary">Register</a>
+        </li>
+    </ul>
+    
+    <!-- Mobile hamburger -->
+    <button class="mobile-menu-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+</nav>
+
+<!-- Mobile menu overlay -->
+<div class="mobile-nav" id="mobileNav"></div>
+    <div class="mobile-nav" id="mobileNav"></div>
+
+   <!-- index.html - Hero Section Fix -->
+<header class="hero">
+    <div class="hero-content">
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav" id="mobileNav" onclick="closeMobileMenu()">
+        <!-- Content injected by JS -->
+        </div>
+        <div class="hero-badge"> Season 2026</div>
+        <h1 class="hero-title">
+            <span class="gradient-text">eFootball</span>
+            Tournament League
+        </h1>
+        <p class="hero-subtitle">Compete. Dominate. Become a Legend.</p>
+        
+        <div class="hero-stats">
+            <div class="stat">
+                <span class="stat-value" id="active-tournaments">12</span>
+                <span class="stat-label">Active<br>Tournaments</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="total-players">2,847</span>
+                <span class="stat-label">Registered<br>Players</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="prize-pool">500K</span>
+                <span class="stat-label">Total Prize<br>Pool (KES)</span>
+            </div>
+        </div>
+        
+        <div class="hero-cta">
+            <a href="tournaments.html" class="btn btn-glow btn-large">Join Tournament</a>
+            <a href="#how-it-works" class="btn btn-outline btn-large">How It Works</a>
+        </div>
+    </div>
+    
+    <div class="hero-visual">
+        <div class="stadium-preview">
+            <div class="pitch">
+                <div class="center-circle"></div>
+                <div class="goal left"></div>
+                <div class="goal right"></div>
+            </div>
+            <div class="players">
+                <div class="player p1"></div>
+                <div class="player p2"></div>
+                <div class="ball"></div>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <!-- Live Tournaments Section -->
+    <section class="section live-tournaments">
+        <div class="container">
+            <!-- Mobile Navigation Overlay -->
+            <div class="mobile-nav" id="mobileNav" onclick="closeMobileMenu()">
+            <!-- Content injected by JS -->
+            </div>
+            <h2 class="section-title">
+                <span class="live-indicator"></span>
+                Live Tournaments
+            </h2>
+            <div class="tournament-grid" id="live-tournaments">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="section how-it-works">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">01</div>
+                    <div class="step-icon">📝</div>
+                    <h3>Register</h3>
+                    <p>Create your player profile with your eFootball team name</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">02</div>
+                    <div class="step-icon">💰</div>
+                    <h3>Pay Entry Fee</h3>
+                    <p>Use M-Pesa to securely pay tournament entry fees</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">03</div>
+                    <div class="step-icon">⚔️</div>
+                    <h3>Compete</h3>
+                    <p>Play matches and upload screenshots for verification</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">04</div>
+                    <div class="step-icon">🏆</div>
+                    <h3>Win Prizes</h3>
+                    <p>Climb the leaderboard and win cash prizes</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Top Players Preview -->
+    <section class="section top-players">
+        <div class="container">
+            <h2 class="section-title">Top Players This Week</h2>
+            <div class="leaderboard-preview" id="leaderboard-preview">
+                <!-- Dynamically populated -->
+            </div>
+            <a href="leaderboard.html" class="btn btn-outline btn-center">View Full Leaderboard</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-icon">⚽</span>
+                    <span>eFootballPro</span>
+                </div>
+                <div class="footer-links">
+                    <a href="#">Terms</a>
+                    <a href="#">Privacy</a>
+                    <a href="#">Support</a>
+                </div>
+                <div class="footer-social">
+                    <a href="#" class="social-link">Discord</a>
+                    <a href="#" class="social-link">Twitter</a>
+                    <a href="#" class="social-link">YouTube</a>
+                </div>
+            </div>
+            <p class="copyright">&copy; 2026 eFootball Tournament League. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script src="js/tournaments.js"></script>
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadLiveTournaments();
+            loadLeaderboardPreview();
+        });
+    </script>
+</body>
+</html>

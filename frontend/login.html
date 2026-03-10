@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - eFootball Tournament</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-gradient"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo">
+                <span class="logo-icon">⚽</span>
+                <span class="logo-text">eFootball<span class="highlight">Pro</span></span>
+            </div>
+        </div>
+        <button class="mobile-menu-toggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <div class="mobile-nav" id="mobileNav" onclick="closeMobileMenu()"></div>
+
+    <div class="form-container">
+        <h1 class="form-title gradient-text">Welcome Back</h1>
+        
+        <!-- Show redirect message if coming from protected page -->
+        <div id="redirectMessage" class="alert alert-success hidden" style="margin-bottom: 1rem;">
+            Please login to continue
+        </div>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="email" class="form-input" placeholder="your@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%; margin-top: 1rem;">
+                Login
+            </button>
+            
+            <p style="text-align: center; margin-top: 1.5rem; color: var(--text-muted);">
+                Don't have an account? <a href="register.html" style="color: var(--primary);" id="registerLink">Register here</a>
+            </p>
+        </form>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Check for redirect parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect') || sessionStorage.getItem('redirectAfterLogin');
+        
+        if (redirectUrl) {
+            document.getElementById('redirectMessage').classList.remove('hidden');
+            // Update register link to preserve redirect
+            document.getElementById('registerLink').href = `register.html?redirect=${encodeURIComponent(redirectUrl)}`;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const credentials = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(credentials)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Clear redirect from storage
+                    sessionStorage.removeItem('redirectAfterLogin');
+                    
+                    // Redirect to intended page or dashboard
+                    const destination = redirectUrl || 'dashboard.html';
+                    window.location.href = destination;
+                } else {
+                    showAlert(data.message || 'Invalid credentials', 'error');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
