@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: efootball-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false  # Set in dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MPESA_ENV
+        value: sandbox

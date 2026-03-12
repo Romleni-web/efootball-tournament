@@ -6,7 +6,7 @@ const numCPUs = os.cpus().length;
 if (cluster.isMaster) {
     console.log(`Master ${process.pid} is running`);
     
-    // Fork workers
+    // Fork workers (use all CPUs)
     for (let i = 0; i < numCPUs; i++) {
         cluster.fork();
     }

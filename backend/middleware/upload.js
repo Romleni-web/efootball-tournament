@@ -1,8 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
-// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -14,21 +14,12 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `match-${uniqueSuffix}${ext}`);
+        cb(null, `match-${uniqueSuffix}.png`);
     }
 });
 
 const fileFilter = (req, file, cb) => {
-    // Allowed mime types
-    const allowedMimes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp'
-    ];
-    
-    // Also check extension as fallback
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const ext = path.extname(file.originalname).toLowerCase();
     const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
     
@@ -39,32 +30,36 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-const limits = {
-    fileSize: 5 * 1024 * 1024, // 5MB max
-    files: 1
-};
-
-const upload = multer({ 
-    storage, 
-    fileFilter, 
-    limits 
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+        files: 1
+    }
 });
 
-// Error handling wrapper
-upload.handleError = (err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ 
-                success: false,
-                message: 'File too large. Maximum size is 5MB.' 
-            });
-        }
-        return res.status(400).json({ 
-            success: false,
-            message: err.message 
-        });
+// Image optimization middleware
+const optimizeImage = async (req, res, next) => {
+    if (!req.file) return next();
+    
+    try {
+        const inputPath = req.file.path;
+        const outputPath = inputPath.replace('.png', '-optimized.png');
+        
+        await sharp(inputPath)
+            .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
+            .png({ quality: 80 })
+            .toFile(outputPath);
+        
+        // Replace original with optimized
+        fs.unlinkSync(inputPath);
+        fs.renameSync(outputPath, inputPath);
+        
+        next();
+    } catch (error) {
+        next(error);
     }
-    next(err);
 };
 
-module.exports = upload;
+module.exports = { upload, optimizeImage };
