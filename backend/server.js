@@ -18,11 +18,18 @@ const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 // Validate required environment variables
-const requiredEnv = ['MONGODB_URI', 'JWT_SECRET', 'MPESA_CONSUMER_KEY', 'MPESA_CONSUMER_SECRET'];
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
 const missingEnv = requiredEnv.filter(env => !process.env[env]);
 if (missingEnv.length > 0) {
     console.error('❌ Missing required environment variables:', missingEnv.join(', '));
     process.exit(1);
+}
+
+// M-Pesa is optional (manual payments supported)
+if (process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET) {
+    logger.info('✅ M-Pesa STK Push enabled');
+} else {
+    logger.warn('⚠️  M-Pesa STK Push disabled - Manual payments only');
 }
 
 // Initialize logger
@@ -126,6 +133,10 @@ const authLimiter = rateLimit({
     max: 10,
     skipSuccessfulRequests: true
 });
+
+// Add these with your other routes
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/leaderboard', require('./routes/leaderboard'));
 
 app.use('/api/', limiter);
 app.use('/api/auth/', authLimiter);
