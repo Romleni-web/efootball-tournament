@@ -17,22 +17,7 @@ const { v4: uuidv4 } = require('uuid');
 // Load environment variables
 require('dotenv').config();
 
-// Validate required environment variables
-const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
-const missingEnv = requiredEnv.filter(env => !process.env[env]);
-if (missingEnv.length > 0) {
-    console.error('❌ Missing required environment variables:', missingEnv.join(', '));
-    process.exit(1);
-}
-
-// M-Pesa is optional (manual payments supported)
-if (process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET) {
-    logger.info('✅ M-Pesa STK Push enabled');
-} else {
-    logger.warn('⚠️  M-Pesa STK Push disabled - Manual payments only');
-}
-
-// Initialize logger
+// Initialize logger FIRST
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(
@@ -64,6 +49,21 @@ const logger = winston.createLogger({
         })
     ]
 });
+
+// Validate required environment variables (MPESA optional)
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
+const missingEnv = requiredEnv.filter(env => !process.env[env]);
+if (missingEnv.length > 0) {
+    logger.error('❌ Missing required environment variables:', missingEnv.join(', '));
+    process.exit(1);
+}
+
+// M-Pesa is optional (manual payments supported)
+if (process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET) {
+    logger.info('✅ M-Pesa STK Push enabled');
+} else {
+    logger.warn('⚠️  M-Pesa STK Push disabled - Manual payments only');
+}
 
 // Ensure directories exist
 ['logs', 'uploads'].forEach(dir => {
@@ -121,22 +121,17 @@ const limiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res, next, options) => {
+    handler: (req, res, next, optionsUsed) => {
         logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
-        res.status(429).json(options.message);
+        res.status(429).json({ success: false, message: optionsUsed.message });
     }
 });
 
-// Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 10,
     skipSuccessfulRequests: true
 });
-
-// Add these with your other routes
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/leaderboard', require('./routes/leaderboard'));
 
 app.use('/api/', limiter);
 app.use('/api/auth/', authLimiter);
