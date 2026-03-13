@@ -53,7 +53,7 @@ router.post('/register', [
             { expiresIn: '7d' }
         );
 
-        res.status(201).json({
+res.status(201).json({
             success: true,
             token,
             user: {
@@ -61,6 +61,7 @@ router.post('/register', [
                 username: user.username,
                 email: user.email,
                 teamName: user.teamName,
+                gameId: user.gameId,
                 isAdmin: user.isAdmin,
                 points: user.points,
                 wins: user.wins,
@@ -102,7 +103,7 @@ router.post('/login', [
             { expiresIn: '7d' }
         );
 
-        res.json({
+res.json({
             success: true,
             token,
             user: {
@@ -110,6 +111,7 @@ router.post('/login', [
                 username: user.username,
                 email: user.email,
                 teamName: user.teamName,
+                gameId: user.gameId,
                 isAdmin: user.isAdmin,
                 points: user.points,
                 wins: user.wins,
@@ -146,6 +148,45 @@ router.post('/refresh', auth, async (req, res) => {
         );
         res.json({ token });
     } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update user's Game ID
+router.post('/update-gameid', auth, async (req, res) => {
+    try {
+        const { gameId } = req.body;
+        
+        if (!gameId || !/^[A-Z0-9]{4,10}$/.test(gameId.toUpperCase())) {
+            return res.status(400).json({ message: 'Invalid Game ID format (4-10 alphanumeric characters)' });
+        }
+        
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if Game ID is already taken
+        const existing = await User.findOne({ 
+            gameId: gameId.toUpperCase(),
+            _id: { $ne: req.user.userId }
+        });
+        
+        if (existing) {
+            return res.status(400).json({ message: 'This Game ID is already registered by another player' });
+        }
+        
+        user.gameId = gameId.toUpperCase();
+        await user.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'Game ID updated successfully',
+            gameId: user.gameId
+        });
+        
+    } catch (error) {
+        console.error('Update Game ID error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -1,10 +1,149 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
 const Match = require('../models/Match');
 const Tournament = require('../models/Tournament');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const RoomGenerator = require('../utils/roomGenerator');
+
+// Generate room for match (both players can do this)
+router.post('/:id/generate-room', auth, async (req, res) => {
+    try {
+        const match = await Match.findById(req.params.id)
+            .populate('player1', 'username gameId')
+            .populate('player2', 'username gameId');
+
+        if (!match) {
+            return res.status(404).json({ message: 'Match not found' });
+        }
+
+        // Verify user is part of match
+        const isPlayer1 = match.player1._id.toString() === req.user.userId;
+        const isPlayer2 = match.player2._id.toString() === req.user.userId;
+
+        if (!isPlayer1 && !isPlayer2) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        // Check if room already exists
+        if (!match.gameSession.roomId) {
+            // Generate new room
+match.gameSession.roomId = RoomGenerator.generateRoomId();
+match.gameSession.password = RoomGenerator.generatePassword();
+            match.gameSession.generatedAt = new Date();
+            match.gameSession.generatedBy = req.user.userId;
+        }
+
+        // Update player Game IDs if not set
+        const currentUser = await User.findById(req.user.userId);
+        if (isPlayer1 && !match.gameSession.player1GameId) {
+            match.gameSession.player1GameId = currentUser.gameId;
+        } else if (isPlayer2 && !match.gameSession.player2GameId) {
+            match.gameSession.player2GameId = currentUser.gameId;
+        }
+
+        // Update status to ready if both players have clicked
+        if (match.gameSession.player1GameId && match.gameSession.player2GameId) {
+            match.status = 'ready';
+        }
+
+        await match.save();
+
+        // Return room info from perspective of requesting player
+        const opponent = isPlayer1 ? match.player2 : match.player1;
+        const myGameId = isPlayer1 ? match.gameSession.player1GameId : match.gameSession.player2GameId;
+        const opponentGameId = isPlayer1 ? match.gameSession.player2GameId : match.gameSession.player1GameId;
+
+        res.json({
+            success: true,
+            room: {
+                roomId: match.gameSession.roomId,
+                password: match.gameSession.roomPassword,
+                myGameId: myGameId,
+                opponentGameId: opponentGameId,
+                opponentUsername: opponent.username,
+                opponentTeam: opponent.teamName,
+                status: match.status,
+                bothReady: !!(match.gameSession.player1GameId && match.gameSession.player2GameId)
+            }
+        });
+
+    } catch (error) {
+        console.error('Generate room error:', error);
+        res.status(500).json({ message: 'Failed to generate room' });
+    }
+});
+
+// Get match room info (for checking status)
+router.get('/:id/room-info', auth, async (req, res) => {
+    try {
+        const match = await Match.findById(req.params.id)
+            .populate('player1', 'username teamName gameId')
+            .populate('player2', 'username teamName gameId');
+
+        if (!match) {
+            return res.status(404).json({ message: 'Match not found' });
+        }
+
+        const isPlayer1 = match.player1._id.toString() === req.user.userId;
+        const isPlayer2 = match.player2._id.toString() === req.user.userId;
+
+        if (!isPlayer1 && !isPlayer2) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const opponent = isPlayer1 ? match.player2 : match.player1;
+        const myGameId = isPlayer1 ? match.gameSession.player1GameId : match.gameSession.player2GameId;
+        const opponentGameId = isPlayer1 ? match.gameSession.player2GameId : match.gameSession.player1GameId;
+
+        res.json({
+            success: true,
+            room: {
+                roomId: match.gameSession.roomId,
+                password: match.gameSession.roomPassword,
+                myGameId: myGameId,
+                opponentGameId: opponentGameId,
+                opponentUsername: opponent.username,
+                opponentTeam: opponent.teamName,
+                status: match.status,
+                bothReady: !!(match.gameSession.player1GameId && match.gameSession.player2GameId),
+                generatedAt: match.gameSession.generatedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Room info error:', error);
+        res.status(500).json({ message: 'Failed to get room info' });
+    }
+});
+
+// Update match status to playing (when players enter the game)
+router.post('/:id/start-playing', auth, async (req, res) => {
+    try {
+        const match = await Match.findById(req.params.id);
+
+        if (!match) {
+            return res.status(404).json({ message: 'Match not found' });
+        }
+
+        const isPlayer = match.player1.toString() === req.user.userId || 
+                        match.player2.toString() === req.user.userId;
+
+        if (!isPlayer) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        match.status = 'playing';
+        await match.save();
+
+        res.json({ success: true, message: 'Match started' });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // Submit match result with screenshot
 router.post('/submit-result', auth, upload.single('screenshot'), async (req, res) => {
@@ -25,7 +164,6 @@ router.post('/submit-result', auth, upload.single('screenshot'), async (req, res
         const isPlayer2 = match.player2.toString() === req.user.userId;
 
         if (!isPlayer1 && !isPlayer2) {
-            // Clean up uploaded file
             if (req.file) fs.unlinkSync(req.file.path);
             return res.status(403).json({ message: 'Not authorized - you are not a player in this match' });
         }
@@ -50,7 +188,7 @@ router.post('/submit-result', auth, upload.single('screenshot'), async (req, res
         match.submittedBy = req.user.userId;
         match.status = 'completed';
 
-        // Determine winner (allow draws for group stage, but not for elimination)
+        // Determine winner
         const tournament = await Tournament.findById(match.tournament);
         
         if (score1 > score2) {
@@ -58,26 +196,23 @@ router.post('/submit-result', auth, upload.single('screenshot'), async (req, res
         } else if (score2 > score1) {
             match.winner = match.player2;
         } else {
-            // Draw - mark as disputed for admin resolution in elimination
             if (tournament.format === 'single-elimination' || tournament.format === 'double-elimination') {
                 match.status = 'disputed';
                 match.winner = null;
             } else {
-                // Round robin - allow draw
                 match.winner = null;
             }
         }
 
         await match.save();
 
-        // If we have a winner and it's not disputed, auto-advance in bracket
         if (match.winner && match.status === 'completed') {
             await processMatchCompletion(match, tournament);
         }
 
         res.json({
             success: true,
-            message: match.status === 'disputed' ? 'Result submitted - requires admin review (draw in elimination)' : 'Result submitted successfully',
+            message: match.status === 'disputed' ? 'Result submitted - requires admin review' : 'Result submitted successfully',
             match: {
                 id: match._id,
                 status: match.status,
@@ -89,7 +224,6 @@ router.post('/submit-result', auth, upload.single('screenshot'), async (req, res
 
     } catch (error) {
         console.error('Submit result error:', error);
-        // Clean up file on error
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
@@ -101,8 +235,8 @@ router.post('/submit-result', auth, upload.single('screenshot'), async (req, res
 router.get('/:id', auth, async (req, res) => {
     try {
         const match = await Match.findById(req.params.id)
-            .populate('player1', 'username teamName')
-            .populate('player2', 'username teamName')
+            .populate('player1', 'username teamName gameId')
+            .populate('player2', 'username teamName gameId')
             .populate('winner', 'username teamName')
             .populate('tournament', 'name')
             .populate('submittedBy', 'username')
@@ -112,7 +246,6 @@ router.get('/:id', auth, async (req, res) => {
             return res.status(404).json({ message: 'Match not found' });
         }
 
-        // Check authorization
         const isPlayer = match.player1._id.toString() === req.user.userId || 
                         match.player2._id.toString() === req.user.userId;
         const user = await User.findById(req.user.userId);
@@ -130,7 +263,7 @@ router.get('/:id', auth, async (req, res) => {
     }
 });
 
-// Get my matches
+// Get my upcoming matches
 router.get('/my/upcoming', auth, async (req, res) => {
     try {
         const matches = await Match.find({
@@ -138,7 +271,7 @@ router.get('/my/upcoming', auth, async (req, res) => {
                 { player1: req.user.userId },
                 { player2: req.user.userId }
             ],
-            status: { $in: ['scheduled', 'ongoing'] }
+            status: { $in: ['scheduled', 'ready', 'playing'] }
         })
         .populate('player1', 'username teamName')
         .populate('player2', 'username teamName')
@@ -153,7 +286,8 @@ router.get('/my/upcoming', auth, async (req, res) => {
                 tournament: m.tournament,
                 scheduledTime: m.scheduledTime,
                 round: m.round,
-                status: m.status
+                status: m.status,
+                roomId: m.gameSession?.roomId || null
             }))
         });
     } catch (error) {
@@ -163,10 +297,7 @@ router.get('/my/upcoming', auth, async (req, res) => {
 
 // Process match completion
 async function processMatchCompletion(match, tournament) {
-    // Update player stats
     await updatePlayerStats(match);
-    
-    // Advance winner in bracket if applicable
     await advanceWinnerInBracket(match, tournament);
 }
 
@@ -187,7 +318,6 @@ async function updatePlayerStats(match) {
         loser.losses += 1;
         await loser.save();
     } else {
-        // Draw
         player1.points += 1;
         player2.points += 1;
         await Promise.all([player1.save(), player2.save()]);
@@ -195,44 +325,36 @@ async function updatePlayerStats(match) {
 }
 
 async function advanceWinnerInBracket(match, tournament) {
-    if (!match.winner) return; // No winner to advance
+    if (!match.winner) return;
 
     const currentRound = match.round;
     const nextRound = currentRound + 1;
     const nextMatchNumber = Math.ceil(match.matchNumber / 2);
 
-    // Check if there's a next round
     const nextRoundMatches = await Match.find({
         tournament: tournament._id,
         round: nextRound
     });
 
     if (nextRoundMatches.length === 0) {
-        // This was the final - tournament complete
         tournament.status = 'finished';
         tournament.endDate = new Date();
         await tournament.save();
-        
-        // Award prizes (simplified)
-        await awardPrizes(tournament, match.winner);
         return;
     }
 
-    // Find or create next match
     let nextMatch = nextRoundMatches.find(m => m.matchNumber === nextMatchNumber);
     
     if (!nextMatch) {
-        // Create next round match if it doesn't exist
         nextMatch = new Match({
             tournament: tournament._id,
             round: nextRound,
             matchNumber: nextMatchNumber,
-            scheduledTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Next day
+            scheduledTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
             status: 'scheduled'
         });
     }
 
-    // Place winner in appropriate slot
     const isFirstSlot = match.matchNumber % 2 === 1;
     if (isFirstSlot) {
         nextMatch.player1 = match.winner;
@@ -242,18 +364,10 @@ async function advanceWinnerInBracket(match, tournament) {
 
     await nextMatch.save();
 
-    // Add to tournament matches if new
     if (!tournament.matches.includes(nextMatch._id)) {
         tournament.matches.push(nextMatch._id);
         await tournament.save();
     }
-}
-
-async function awardPrizes(tournament, winnerId) {
-    // Simplified prize distribution
-    const winner = await User.findById(winnerId);
-    console.log(`🏆 Tournament ${tournament.name} won by ${winner.username}`);
-    // In production: Handle actual prize distribution
 }
 
 module.exports = router;

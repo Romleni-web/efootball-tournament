@@ -1,4 +1,5 @@
-const API_URL = 'https://efootball-tournament-1.onrender.com/api';
+// Import from config
+const { API_URL } = require('./config.js');
 
 // Check authentication status
 function checkAuth() {

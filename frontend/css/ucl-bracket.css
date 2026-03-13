@@ -1,0 +1,213 @@
+/* UEFA Champions League Bracket Styles */
+.ucl-bracket-container {
+    background: linear-gradient(135deg, #0a1a0a 0%, #1a2f1a 50%, #0a1a0a 100%);
+    border: 2px solid #39ff14;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 0 40px rgba(57, 255, 20, 0.3);
+    backdrop-filter: blur(10px);
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: auto;
+}
+
+.bracket-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, #00d4ff, #39ff14);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 2rem;
+    text-shadow: none;
+}
+
+.bracket-svg {
+    width: 100%;
+    height: 800px;
+    max-width: 1400px;
+    display: block;
+    margin: 0 auto;
+}
+
+.team-slot {
+    dominant-baseline: middle;
+    font-family: var(--font-body);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    min-width: 120px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-slot.winner {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #000;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    animation: winnerGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes winnerGlow {
+    from { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+    to { box-shadow: 0 0 40px rgba(255, 215, 0, 1); }
+}
+
+.score {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 900;
+    fill: #39ff14;
+    text-anchor: middle;
+}
+
+.match-line {
+    stroke: #39ff14;
+    stroke-width: 3;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.5));
+    opacity: 0;
+    animation: drawLine 1s ease-out forwards;
+}
+
+@keyframes drawLine {
+    to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+.final-trophy {
+    fill: #ffd700;
+    stroke: #ff6b35;
+    stroke-width: 3;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.6));
+    animation: trophyShine 2s ease-in-out infinite;
+}
+
+@keyframes trophyShine {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.05) rotate(2deg); }
+}
+
+.round-label {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    fill: #00d4ff;
+    text-anchor: middle;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .ucl-bracket-container {
+        padding: 1rem;
+    }
+    
+    .bracket-svg {
+        height: 600px;
+    }
+    
+    .team-slot {
+        font-size: 0.85rem;
+        min-width: 90px;
+        padding: 6px 10px;
+    }
+}
+
+/* Bracket modal */
+.bracket-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s;
+}
+
+.bracket-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.bracket-modal {
+    background: var(--card);
+    border: 2px solid var(--primary);
+    border-radius: 20px;
+    max-width: 95vw;
+    max-height: 95vh;
+    overflow: hidden;
+    transform: scale(0.8);
+    transition: transform 0.4s;
+    box-shadow: var(--glow-primary);
+}
+
+.bracket-modal-overlay.active .bracket-modal {
+    transform: scale(1);
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255,0,0,0.2);
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    transition: all 0.3s;
+}
+
+.modal-close:hover {
+    background: #ff4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+.bracket-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bracket-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.bracket-name {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--primary);
+}
+
+.bracket-status {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}

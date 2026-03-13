@@ -175,6 +175,62 @@ router.get('/match-history', auth, async (req, res) => {
     }
 });
 
+// Get wallet balance (Spec Step 7-8)
+router.get('/wallet', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('walletBalance');
+    res.json({
+      success: true,
+      balance: user.walletBalance || 0,
+      user: {
+        id: req.user.userId,
+        username: (await User.findById(req.user.userId).select('username')).username
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get wallet' });
+  }
+});
+
+// Withdraw request (Spec Step 8)
+router.post('/withdraw', auth, async (req, res) => {
+  try {
+    const { amount, mpesaNumber } = req.body;
+    
+    if (!amount || amount < 100) {
+      return res.status(400).json({ message: 'Minimum withdrawal KES 100' });
+    }
+    
+    const user = await User.findById(req.user.userId);
+    if (user.walletBalance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Create withdrawal request (simple - enhance with Withdrawal model later)
+    const withdrawal = {
+      user: req.user.userId,
+      amount,
+      mpesaNumber,
+      status: 'pending',
+      requestedAt: new Date()
+    };
+
+    // TEMP: Deduct immediately, log for admin
+    user.walletBalance -= amount;
+    await user.save();
+
+    console.log('💸 Withdrawal Request:', withdrawal); // Admin monitors console/logs
+
+    res.json({
+      success: true,
+      message: 'Withdrawal request submitted. Admin will send M-Pesa within 24h. Balance deducted.',
+      newBalance: user.walletBalance
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Withdrawal failed' });
+  }
+});
+
 // Get payment history
 router.get('/payments', auth, async (req, res) => {
     try {
@@ -189,11 +245,12 @@ router.get('/payments', auth, async (req, res) => {
                 tournament: p.tournament,
                 amount: p.amount,
                 status: p.status,
-                receiptNumber: p.mpesaReceiptNumber,
+                receiptNumber: p.mpesaReceiptNumber || p.transactionCode,
                 phoneNumber: p.phoneNumber,
                 transactionDate: p.transactionDate,
                 createdAt: p.createdAt,
-                failureReason: p.status === 'failed' ? p.resultDesc : null
+                failureReason: p.status === 'failed' ? p.resultDesc : null,
+                verified: p.adminVerified
             }))
         });
     } catch (error) {
@@ -204,26 +261,43 @@ router.get('/payments', auth, async (req, res) => {
 // Update profile
 router.patch('/profile', auth, async (req, res) => {
     try {
-        const allowedUpdates = ['teamName', 'email'];
+        const { teamName, email, gameId } = req.body;
         const updates = {};
         
-        Object.keys(req.body).forEach(key => {
-            if (allowedUpdates.includes(key)) {
-                updates[key] = req.body[key];
+        if (teamName) updates.teamName = teamName;
+        if (email) updates.email = email;
+        
+        if (gameId !== undefined) {
+            const cleanGameId = gameId.trim().toUpperCase();
+            if (cleanGameId.length < 4) {
+                return res.status(400).json({ message: 'Game ID must be at least 4 characters (e.g., ABCD1234)' });
             }
-        });
+            const existing = await User.findOne({ 
+                gameId: cleanGameId, 
+                _id: { $ne: req.user.userId } 
+            });
+            if (existing) {
+                return res.status(400).json({ message: 'Game ID already taken. Please choose another.' });
+            }
+            updates.gameId = cleanGameId;
+        }
 
         const user = await User.findByIdAndUpdate(
             req.user.userId,
             updates,
             { new: true, runValidators: true }
-        ).select('-password');
+        ).select('-password -__v');
+
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(user));
 
         res.json({
             success: true,
-            user
+            user,
+            message: 'Profile updated successfully'
         });
     } catch (error) {
+        console.error('Profile update error:', error);
         res.status(500).json({ message: 'Update failed' });
     }
 });

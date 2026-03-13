@@ -1,8 +1,15 @@
+const API_URL = 'https://efootball-tournament-1.onrender.com/api';
+
 async function loadDashboard() {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
     document.getElementById('playerName').textContent = user.username || 'Player';
+    
+    // Load gameId if exists
+    if (user.gameId) {
+        document.getElementById('gameIdInput').value = user.gameId;
+    }
     
     try {
         // Load player stats
@@ -35,22 +42,25 @@ async function loadDashboard() {
         }
         
         // Load upcoming matches
-        const matchesRes = await fetch(`${API_URL}/users/upcoming-matches`, {
+        const matchesRes = await fetch(`${API_URL}/matches/my/upcoming`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const matches = await matchesRes.json();
         
         const matchesContainer = document.getElementById('upcomingMatches');
-        if (matches.length > 0) {
-            matchesContainer.innerHTML = matches.map(m => `
+        if (matches.matches && matches.matches.length > 0) {
+            matchesContainer.innerHTML = matches.matches.map(m => `
                 <div style="padding: 1rem; background: var(--darker); border-radius: 8px; margin-bottom: 0.5rem; border-left: 3px solid var(--primary);">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 700;">vs ${m.opponent}</span>
+                        <span style="font-weight: 700;">vs ${m.opponent.username}</span>
                         <span style="color: var(--primary);">${new Date(m.scheduledTime).toLocaleDateString()}</span>
                     </div>
-                    <button onclick="openResultModal('${m._id}', '${m.opponent}')" class="btn btn-primary" style="width: 100%;">
-                        Submit Result
-                    </button>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        ${m.roomId ? `Room: ${m.roomId}` : 'Room not generated'}
+                    </div>
+                    <a href="matches.html?match=${m.id}" class="btn btn-primary" style="width: 100%; text-align: center; display: block;">
+                        ${m.status === 'ready' ? 'Enter Match Room' : 'View Match'}
+                    </a>
                 </div>
             `).join('');
         }
@@ -79,6 +89,58 @@ async function loadDashboard() {
         
     } catch (error) {
         console.error('Dashboard load error:', error);
+    }
+}
+
+async function saveGameId() {
+    const gameId = document.getElementById('gameIdInput').value.trim().toUpperCase();
+    const btn = document.getElementById('saveGameIdBtn');
+    
+    if (!gameId) {
+        showAlert('Please enter your Game ID', 'error');
+        return;
+    }
+    
+    if (!/^[A-Z0-9]{4,10}$/.test(gameId)) {
+        showAlert('Game ID must be 4-10 letters/numbers', 'error');
+        return;
+    }
+    
+    btn.innerHTML = '<span class="loading"></span>';
+    btn.disabled = true;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/users/update-gameid`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ gameId })
+        });
+        
+        if (response.ok) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            user.gameId = gameId;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            showAlert('Game ID saved successfully!', 'success');
+            btn.textContent = 'Saved!';
+            setTimeout(() => {
+                btn.textContent = 'Save';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            const data = await response.json();
+            showAlert(data.message || 'Failed to save Game ID', 'error');
+            btn.textContent = 'Save';
+            btn.disabled = false;
+        }
+    } catch (error) {
+        showAlert('Network error. Please try again.', 'error');
+        btn.textContent = 'Save';
+        btn.disabled = false;
     }
 }
 
@@ -121,4 +183,24 @@ async function submitMatchResult(e) {
     } catch (error) {
         showAlert('Network error. Please try again.', 'error');
     }
+}
+
+function showAlert(message, type = 'info') {
+    const existing = document.querySelector('.alert');
+    if (existing) existing.remove();
+    
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    alert.style.position = 'fixed';
+    alert.style.top = '80px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '3000';
+    alert.style.maxWidth = '300px';
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
 }

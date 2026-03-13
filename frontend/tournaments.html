@@ -65,6 +65,22 @@
         </div>
     </section>
 
+    <!-- UCL Bracket Modal -->
+    <div class="bracket-modal-overlay hidden" id="bracketModal">
+        <div class="bracket-modal">
+            <div class="bracket-header">
+                <div class="bracket-info">
+                    <div class="bracket-name" id="bracketTournamentName"></div>
+                    <div class="bracket-status" id="bracketStatus"></div>
+                </div>
+                <button class="modal-close" onclick="closeBracketModal()">×</button>
+            </div>
+            <div class="ucl-bracket-container">
+                <svg class="bracket-svg" id="bracketSvg" viewBox="0 0 1400 800"></svg>
+            </div>
+        </div>
+    </div>
+
     <!-- Payment Modal (only shown when logged in) -->
     <div class="modal-overlay" id="paymentModal">
         <div class="modal">
@@ -127,26 +143,42 @@
             const isFull = tournament.registeredPlayers >= tournament.maxPlayers;
             const canJoin = tournament.status === 'open' && !isFull;
             
-            // Determine button state based on auth
-            let buttonHTML;
-            if (!isLoggedIn) {
+            // Enhanced buttons: Join + View Bracket for knockout tournaments
+            let buttonHTML = '';
+            
+            // Always show bracket button for non-open tournaments
+            if (tournament.status !== 'open') {
                 buttonHTML = `
-                    <button class="btn btn-outline" style="width: 100%;" onclick="redirectToLogin()">
-                        Login to Join
+                    <button class="btn btn-accent btn-large" style="width: 100%; margin-bottom: 0.75rem;" onclick="showBracket('${tournament._id}', '${tournament.name}', '${tournament.status}')">
+                        🏆 View UCL Bracket
                     </button>
                 `;
-            } else if (canJoin) {
-                buttonHTML = `
-                    <button class="btn btn-primary btn-large" style="width: 100%;" onclick="openPaymentModal('${tournament._id}', '${tournament.name}', ${tournament.entryFee})">
-                        Join Tournament
-                    </button>
-                `;
-            } else {
-                buttonHTML = `
-                    <button class="btn btn-outline" style="width: 100%;" disabled>
-                        ${isFull ? 'Tournament Full' : 'Registration Closed'}
-                    </button>
-                `;
+            }
+            
+            // Join button logic
+            if (tournament.status === 'open') {
+                if (!isLoggedIn) {
+                    buttonHTML += `
+                        <button class="btn btn-outline" style="width: 100%;" onclick="redirectToLogin()">
+                            Login to Join
+                        </button>
+                    `;
+                } else if (canJoin) {
+                    buttonHTML += `
+<a href="bracket.html?tournament=${tournament._id}" class="btn btn-accent btn-large" style="width: 100%; text-decoration: none;">
+    🏆 View UCL Bracket
+</a>
+<button class="btn btn-primary btn-large" style="width: 100%;" onclick="openPaymentModal('${tournament._id}', '${tournament.name}', ${tournament.entryFee})">
+    Join Tournament
+</button>
+                    `;
+                } else {
+                    buttonHTML += `
+                        <button class="btn btn-outline" style="width: 100%;" disabled>
+                            Tournament Full
+                        </button>
+                    `;
+                }
             }
             
             return `

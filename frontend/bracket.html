@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Bracket - eFootball Pro</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .bracket-container {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 2rem;
+            overflow-x: auto;
+            min-height: 600px;
+        }
+        
+        .bracket-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 3rem;
+            min-width: 1200px;
+            padding: 2rem;
+        }
+        
+        /* Round styling */
+        .round {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            position: relative;
+        }
+        
+        .round-title {
+            text-align: center;
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: var(--darker);
+            border-radius: 8px;
+        }
+        
+        /* Match Card - UEFA Style */
+        .match-pair {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+        }
+        
+        .match-card {
+            background: var(--darker);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            width: 220px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .match-card:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+        
+        .match-card.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+        }
+        
+        .match-card.completed {
+            border-color: var(--primary);
+        }
+        
+        .match-card.champion {
+            border-color: gold;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%);
+        }
+        
+        /* Player slots */
+        .player {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+        
+        .player:last-child {
+            border-bottom: none;
+        }
+        
+        .player.winner {
+            background: rgba(57, 255, 20, 0.1);
+        }
+        
+        .player.winner::before {
+            content: '✓';
+            position: absolute;
+            right: 10px;
+            color: var(--accent);
+            font-weight: bold;
+        }
+        
+        .player.seed {
+            font-family: var(--font-display);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            width: 25px;
+        }
+        
+        .player-flag {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--gradient-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .player-team {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .player-score {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 25px;
+            text-align: center;
+        }
+        
+        .player-score.winner {
+            color: var(--accent);
+        }
+        
+        /* TBD (To Be Determined) */
+        .player.tbd {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        /* Connector lines - UEFA style */
+        .connector {
+            position: absolute;
+            right: -3rem;
+            top: 50%;
+            width: 3rem;
+            height: 2px;
+            background: var(--border);
+        }
+        
+        .connector::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -50%;
+            width: 2px;
+            height: 200%;
+            background: var(--border);
+        }
+        
+        /* Special rounds */
+        .final-round {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .trophy-display {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .trophy-icon {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .champion-name {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            color: gold;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        
+        /* Champion card special */
+        .champion-card {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border: 3px solid gold;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            width: 280px;
+        }
+        
+        .champion-card .crown {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .champion-card h3 {
+            font-family: var(--font-display);
+            color: gold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .champion-prize {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .bracket-wrapper {
+                transform: scale(0.8);
+                transform-origin: top left;
+            }
+        }
+        
+        /* Legend */
+        .bracket-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid;
+        }
+        
+        .legend-color.upcoming { border-color: var(--border); }
+        .legend-color.active { border-color: var(--accent); }
+        .legend-color.completed { border-color: var(--primary); }
+        
+        /* Empty state */
+        .empty-bracket {
+            text-align: center;
+            padding: 4rem;
+        }
+        
+        .empty-bracket h3 {
+            font-family: var(--font-display);
+            margin-bottom: 1rem;
+        }
+        
+        /* Action buttons on matches */
+        .match-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .match-btn {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .match-btn.enter {
+            background: var(--accent);
+            color: var(--dark);
+        }
+        
+        .match-btn.view {
+            background: var(--darker);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-gradient"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo">
+                <span class="logo-icon">⚽</span>
+                <span class="logo-text">eFootball<span class="highlight">Pro</span></span>
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="tournaments.html">Tournaments</a></li>
+            <li><a href="leaderboard.html">Leaderboard</a></li>
+            <li><a href="dashboard.html">Dashboard</a></li>
+        </ul>
+        <div class="user-menu">
+            <span class="username"></span>
+            <button onclick="logout()" class="btn btn-danger">Logout</button>
+        </div>
+    </nav>
+
+    <section class="section" style="margin-top: 6rem;">
+        <div class="container">
+            
+            <!-- Tournament Header -->
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 class="section-title" id="tournamentName">UEFA Champions League Bracket</h1>
+                <p style="color: var(--text-muted);" id="tournamentInfo">Round of 16 - Quarter Finals - Semi Finals - Final</p>
+            </div>
+            
+            <!-- Bracket -->
+            <div class="bracket-container">
+                <div class="bracket-wrapper" id="bracketWrapper">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+    <script>
+        // Mock UCL Champions League bracket data
+        const uclBracket = {
+            rounds: [
+                {
+                    name: 'Round of 16',
+                    matches: [
+                        {player1: 'Real Madrid', score1: 2, player2: 'Manchester City', score2: 1, status: 'completed'},
+                        {player1: 'Bayern Munich', score1: 3, player2: 'Arsenal', score2: 0, status: 'completed'},
+                        {player1: 'PSG', score1: 1, player2: 'Barcelona', score2: 4, status: 'completed'},
+                        {player1: 'Liverpool', score1: 0, player2: 'Inter Milan', score2: 2, status: 'completed'},
+                        {player1: 'Juventus', score1: 1, player2: 'Dortmund', score2: 0, status: 'completed'},
+                        {player1: 'Atletico Madrid', score1: 2, player2: 'Leverkusen', score2: 2, status: 'completed'},
+                        {player1: 'Chelsea', score1: 3, player2: 'Porto', score2: 1, status: 'completed'},
+                        {player1: 'Napoli', score1: 0, player2: 'Ajax', score2: 2, status: 'completed'}
+                    ]
+                },
+                {
+                    name: 'Quarter Finals',
+                    matches: [
+                        {player1: 'Real Madrid', score1: 2, player2: 'Bayern Munich', score2: 1, status: 'completed'},
+                        {player1: 'Barcelona', score1: 1, player2: 'Inter Milan', score2: 0, status: 'completed'},
+                        {player1: 'Juventus', score1: 0, player2: 'Atletico Madrid', score2: 2, status: 'completed'},
+                        {player1: 'Chelsea', score1: 3, player2: 'Ajax', score2: 1, status: 'completed'}
+                    ]
+                },
+                {
+                    name: 'Semi Finals',
+                    matches: [
+                        {player1: 'Real Madrid', score1: 4, player2: 'Barcelona', score2: 2, status: 'completed'},
+                        {player1: 'Atletico Madrid', score1: 1, player2: 'Chelsea', score2: 0, status: 'completed'}
+                    ]
+                },
+                {
+                    name: 'FINAL',
+                    matches: [
+                        {player1: 'Real Madrid', score1: 2, player2: 'Atletico Madrid', score2: 0, status: 'completed'}
+                    ]
+                }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderUEFABracket(uclBracket.rounds);
+        });
+
+        function renderUEFABracket(rounds) {
+            const wrapper = document.getElementById('bracketWrapper');
+            wrapper.innerHTML = '';
+            
+            rounds.forEach((round, roundIndex) => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round';
+                
+                // Round title
+                const title = document.createElement('div');
+                title.className = 'round-title';
+                title.textContent = round.name;
+                roundDiv.appendChild(title);
+                
+                // Regular rounds - group into pairs for visual appeal
+                for (let i = 0; i < round.matches.length; i += 2) {
+                    const pairDiv = document.createElement('div');
+                    pairDiv.className = 'match-pair';
+                    
+                    const match1 = round.matches[i];
+                    const match2 = round.matches[i + 1];
+                    
+                    if (match1) {
+                        pairDiv.appendChild(createMatchCard(match1, roundIndex));
+                    }
+                    if (match2) {
+                        pairDiv.appendChild(createMatchCard(match2, roundIndex));
+                    }
+                    
+                    if (i < round.matches.length - 2) {
+                        pairDiv.style.marginBottom = '2rem';
+                    }
+                    
+                    roundDiv.appendChild(pairDiv);
+                }
+                
+                wrapper.appendChild(roundDiv);
+            });
+        }
+
+        function createMatchCard(match, roundIndex) {
+            const card = document.createElement('div');
+            card.className = 'match-card completed'; // All matches shown as completed for demo
+            
+            const p1 = createPlayerSlot(match.player1, match.score1, true); // First team wins for demo
+            const p2 = createPlayerSlot(match.player2, match.score2, false);
+            
+            card.appendChild(p1);
+            card.appendChild(p2);
+            
+            // Add connector for non-final rounds
+            if (roundIndex < 3) {
+                const connector = document.createElement('div');
+                connector.className = 'connector';
+                card.appendChild(connector);
+            }
+            
+            return card;
+        }
+
+        function createPlayerSlot(player, score, isWinner) {
+            const slot = document.createElement('div');
+            slot.className = `player ${isWinner ? 'winner' : ''}`;
+            
+            slot.innerHTML = `
+                <span class="seed">${score}</span>
+                <div class="player-flag">${player[0]}</div>
+                <div class="player-info">
+                    <div class="player-name">${player}</div>
+                    <div class="player-team">${player} FC</div>
+                </div>
+                <span class="player-score ${isWinner ? 'winner' : ''}">WIN</span>
+            `;
+            
+            return slot;
+        }
+    </script>
+</body>
+</html>

@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
     points: { type: Number, default: 0 },
     wins: { type: Number, default: 0 },
     losses: { type: Number, default: 0 },
-    isAdmin: { type: Boolean, default: false }
+    isAdmin: { type: Boolean, default: false },
+    walletBalance: { type: Number, default: 0, min: 0 }
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {
