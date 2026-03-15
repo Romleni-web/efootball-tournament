@@ -19,44 +19,31 @@
                 <span class="logo-text">eFootball<span class="highlight">Pro</span></span>
             </div>
         </div>
-        
-        <!-- Desktop Nav -->
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
-            <li><a href="dashboard.html" class="active">Dashboard</a></li>
+            <li><a href="tournaments.html" class="active">Tournaments</a></li>
             <li><a href="leaderboard.html">Leaderboard</a></li>
+            <li class="auth-links">
+                <a href="login.html" class="btn btn-outline">Login</a>
+                <a href="register.html" class="btn btn-primary">Register</a>
+            </li>
         </ul>
-        
-        <!-- Mobile Hamburger -->
-        <button class="mobile-menu-toggle" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+        <div class="user-menu hidden">
+            <span class="username"></span>
+            <a href="dashboard.html" class="btn btn-outline">Dashboard</a>
+            <button onclick="logout()" class="btn btn-danger">Logout</button>
+        </div>
     </nav>
-
-    <!-- Mobile Navigation Overlay -->
-    <div class="mobile-nav" id="mobileNav" onclick="closeMobileMenu()"></div>
 
     <section class="section" style="margin-top: 6rem;">
         <div class="container">
             <h1 class="section-title">All Tournaments</h1>
             
-            <!-- Login Prompt for non-authenticated users -->
-            <div id="loginPrompt" class="tournament-card" style="margin-bottom: 2rem; display: none;">
-                <h3 style="color: var(--primary); margin-bottom: 0.5rem;">🔒 Login Required</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1rem;">You need an account to join tournaments and compete for prizes.</p>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <a href="login.html" class="btn btn-primary">Login</a>
-                    <a href="register.html" class="btn btn-outline">Create Account</a>
-                </div>
-            </div>
-            
-            <div class="filter-bar" style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="btn btn-outline active" onclick="filterTournaments('all')" style="flex: 1; min-width: 80px;">All</button>
-                <button class="btn btn-outline" onclick="filterTournaments('open')" style="flex: 1; min-width: 80px;">Open</button>
-                <button class="btn btn-outline" onclick="filterTournaments('ongoing')" style="flex: 1; min-width: 80px;">Ongoing</button>
-                <button class="btn btn-outline" onclick="filterTournaments('finished')" style="flex: 1; min-width: 80px;">Finished</button>
+            <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <button class="btn btn-outline active" onclick="filterTournaments('all')">All</button>
+                <button class="btn btn-outline" onclick="filterTournaments('open')">Open</button>
+                <button class="btn btn-outline" onclick="filterTournaments('ongoing')">Ongoing</button>
+                <button class="btn btn-outline" onclick="filterTournaments('finished')">Finished</button>
             </div>
             
             <div class="tournament-grid" id="tournaments-list">
@@ -65,23 +52,7 @@
         </div>
     </section>
 
-    <!-- UCL Bracket Modal -->
-    <div class="bracket-modal-overlay hidden" id="bracketModal">
-        <div class="bracket-modal">
-            <div class="bracket-header">
-                <div class="bracket-info">
-                    <div class="bracket-name" id="bracketTournamentName"></div>
-                    <div class="bracket-status" id="bracketStatus"></div>
-                </div>
-                <button class="modal-close" onclick="closeBracketModal()">×</button>
-            </div>
-            <div class="ucl-bracket-container">
-                <svg class="bracket-svg" id="bracketSvg" viewBox="0 0 1400 800"></svg>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Modal (only shown when logged in) -->
+    <!-- Payment Modal -->
     <div class="modal-overlay" id="paymentModal">
         <div class="modal">
             <div class="modal-header">
@@ -118,144 +89,10 @@
     <script src="js/tournaments.js"></script>
     <script src="js/mpesa.js"></script>
     <script>
-        let currentTournamentId = null;
-        let isLoggedIn = false;
-
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
-            checkLoginStatus();
             loadAllTournaments();
         });
-
-        function checkLoginStatus() {
-            const token = localStorage.getItem('token');
-            isLoggedIn = !!token;
-            
-            // Show login prompt if not logged in
-            const loginPrompt = document.getElementById('loginPrompt');
-            if (loginPrompt) {
-                loginPrompt.style.display = isLoggedIn ? 'none' : 'block';
-            }
-        }
-
-        // Override createTournamentCard to check auth
-        function createTournamentCard(tournament) {
-            const isFull = tournament.registeredPlayers >= tournament.maxPlayers;
-            const canJoin = tournament.status === 'open' && !isFull;
-            
-            // Enhanced buttons: Join + View Bracket for knockout tournaments
-            let buttonHTML = '';
-            
-            // Always show bracket button for non-open tournaments
-            if (tournament.status !== 'open') {
-                buttonHTML = `
-                    <button class="btn btn-accent btn-large" style="width: 100%; margin-bottom: 0.75rem;" onclick="showBracket('${tournament._id}', '${tournament.name}', '${tournament.status}')">
-                        🏆 View UCL Bracket
-                    </button>
-                `;
-            }
-            
-            // Join button logic
-            if (tournament.status === 'open') {
-                if (!isLoggedIn) {
-                    buttonHTML += `
-                        <button class="btn btn-outline" style="width: 100%;" onclick="redirectToLogin()">
-                            Login to Join
-                        </button>
-                    `;
-                } else if (canJoin) {
-                    buttonHTML += `
-<a href="bracket.html?tournament=${tournament._id}" class="btn btn-accent btn-large" style="width: 100%; text-decoration: none;">
-    🏆 View UCL Bracket
-</a>
-<button class="btn btn-primary btn-large" style="width: 100%;" onclick="openPaymentModal('${tournament._id}', '${tournament.name}', ${tournament.entryFee})">
-    Join Tournament
-</button>
-                    `;
-                } else {
-                    buttonHTML += `
-                        <button class="btn btn-outline" style="width: 100%;" disabled>
-                            Tournament Full
-                        </button>
-                    `;
-                }
-            }
-            
-            return `
-                <div class="tournament-card" data-status="${tournament.status}">
-                    <div class="tournament-header">
-                        <h3 class="tournament-name">${tournament.name}</h3>
-                        <span class="tournament-status status-${tournament.status}">${tournament.status}</span>
-                    </div>
-                    
-                    <div class="tournament-details">
-                        <div class="detail">
-                            <span class="detail-label">Entry Fee</span>
-                            <span class="detail-value">KES ${tournament.entryFee}</span>
-                        </div>
-                        <div class="detail">
-                            <span class="detail-label">Prize Pool</span>
-                            <span class="detail-value" style="color: var(--accent);">KES ${tournament.prizePool}</span>
-                        </div>
-                        <div class="detail">
-                            <span class="detail-label">Players</span>
-                            <span class="detail-value">${tournament.registeredPlayers}/${tournament.maxPlayers}</span>
-                        </div>
-                        <div class="detail">
-                            <span class="detail-label">Format</span>
-                            <span class="detail-value">${tournament.format || 'Single Elim'}</span>
-                        </div>
-                    </div>
-                    
-                    ${buttonHTML}
-                </div>
-            `;
-        }
-
-        function redirectToLogin() {
-            sessionStorage.setItem('redirectAfterLogin', window.location.href);
-            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
-        }
-
-        async function loadAllTournaments() {
-            try {
-                const response = await fetch(`${API_URL}/tournaments`);
-                const data = await response.json();
-                
-                const container = document.getElementById('tournaments-list');
-                if (!container) return;
-                
-                if (data.tournaments && data.tournaments.length > 0) {
-                    container.innerHTML = data.tournaments.map(t => createTournamentCard(t)).join('');
-                } else {
-                    container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No tournaments available</p>';
-                }
-            } catch (error) {
-                console.error('Error loading tournaments:', error);
-                document.getElementById('tournaments-list').innerHTML = 
-                    '<p style="text-align: center; color: #ff4444;">Failed to load tournaments</p>';
-            }
-        }
-
-        function filterTournaments(status) {
-            // Update active button
-            document.querySelectorAll('.filter-bar button').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent.toLowerCase() === status || (status === 'all' && btn.textContent === 'All')) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            // Filter cards
-            const cards = document.querySelectorAll('.tournament-card');
-            cards.forEach(card => {
-                if (status === 'all' || card.dataset.status === status) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
     </script>
 </body>
 </html>

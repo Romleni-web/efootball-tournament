@@ -26,23 +26,7 @@ const paymentSchema = new mongoose.Schema({
     },
     resultCode: Number,
     resultDesc: String,
-    transactionDate: Date,
-    // MANUAL payment fields (spec compliance)
-    transactionCode: String,        // Player enters e.g. "QK7X8Y9Z2"
-    screenshotUrl: String,         // /uploads/xxx.jpg
-    adminVerified: { 
-        type: Boolean, 
-        default: false 
-    },
-    adminVerifiedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    adminVerifiedAt: Date,
-    isManual: {
-        type: Boolean,
-        default: true
-    }
+    transactionDate: Date
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);

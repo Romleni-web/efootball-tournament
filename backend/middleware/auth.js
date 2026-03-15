@@ -1,62 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-const auth = (req, res, next) => {
+module.exports = (req, res, next) => {
     try {
-        const authHeader = req.header('Authorization');
-        
-        if (!authHeader) {
-            return res.status(401).json({ 
-                success: false,
-                message: 'No authentication token, access denied' 
-            });
-        }
-
-        // Check Bearer format
-        if (!authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ 
-                success: false,
-                message: 'Invalid token format' 
-            });
-        }
-
-        const token = authHeader.replace('Bearer ', '');
+        const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
-            return res.status(401).json({ 
-                success: false,
-                message: 'No token provided' 
-            });
+            return res.status(401).json({ message: 'No token, authorization denied' });
         }
 
-        const decoded = jwt.verify(
-            token, 
-            process.env.JWT_SECRET || 'your-secret-key'
-        );
-        
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
         req.user = decoded;
         next();
-        
     } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ 
-                success: false,
-                message: 'Token expired, please login again' 
-            });
-        }
-        
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ 
-                success: false,
-                message: 'Invalid token' 
-            });
-        }
-        
-        console.error('Auth middleware error:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Authentication error' 
-        });
+        res.status(401).json({ message: 'Token is not valid' });
     }
 };
-
-module.exports = auth;
